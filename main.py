@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import plotly.express as px
+import matplotlib.pyplot as plt
 url = r"C:\Users\Akbor\Downloads\Exported_Data.xlsx"
 
 df = pd.read_excel(url)
@@ -18,8 +19,8 @@ if well_selector or target_selected:
     print(target_selected)
     second_selection_df = first_df[first_df["target"].isin(target_selected)]
     second_selection_df
-    plot = px.scatter(second_selection_df, x="cycle", y="drn", color="target")
-
-    st.plotly_chart(plot)
-
-    
+    fig = px.line(data_frame=second_selection_df, x='cycle', y='drn', line_group='well_pos', color='target')
+    fig.update_layout(xaxis=dict(showgrid=False),
+              yaxis=dict(showgrid=False)
+              )
+    fig
