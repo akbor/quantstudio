@@ -20,6 +20,7 @@ if well_selector or target_selected:
     second_selection_df = first_df[first_df["target"].isin(target_selected)]
     second_selection_df
     fig = px.line(data_frame=second_selection_df, x='cycle', y='drn', line_group='well_pos', color='target')
+    fig.update_layout(xaxis_title='Cycle', yaxis_title='RFU')
     fig.update_layout(xaxis=dict(showgrid=False),
               yaxis=dict(showgrid=False)
               )
