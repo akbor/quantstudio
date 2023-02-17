@@ -1,19 +1,14 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
 import plotly.express as px
-import matplotlib.pyplot as plt
 
 file_saved = st.file_uploader("Upload file :sunglasses: :")
-print(file_saved)
 
-
-url = r"C:\Users\Akbor\Downloads\Exported_Data.xlsx"
-if file_saved:
-    url = file_saved
-
-df = pd.read_excel(url)
-"# AH225 - Results", df
+if not file_saved:
+    st.info("Awaiting results file!")
+# url = r"C:\Users\Akbor\Downloads\Exported_Data.xlsx"
+df = pd.read_excel(file_saved)
+"# Data", df
 color_map = {
     'TAMRA':'#a8328d',
     'JOE': '#00ad3d',
