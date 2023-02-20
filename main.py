@@ -1,5 +1,5 @@
 
-st.set_page_config(page_title="QuantStudio Analysis", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="QuantStudio Analysis")
 file_saved = st.file_uploader("Upload file:", accept_multiple_files=False)
 
 if file_saved:
