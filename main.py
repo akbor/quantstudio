@@ -66,7 +66,7 @@ if file_saved:
         # print(target_selected)
         if target_selected and well_selector:
             second_selection_df = df[(df["Target"].isin(target_selected)) & (df["Well Position"].isin(well_selector))]
-            a =plot_figure(second_selection_df)
+#             a =plot_figure(second_selection_df)
             # st.plotly_chart(a, theme=None, use_container_width=False)
 
 else:
