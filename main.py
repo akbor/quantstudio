@@ -1,6 +1,6 @@
 
-st.set_page_config(page_title="QuantStudio Analysis", page_icon="😎", layout="wide", initial_sidebar_state="auto")
-file_saved = st.file_uploader("Upload file 😴:", accept_multiple_files=False)
+st.set_page_config(page_title="QuantStudio Analysis", layout="wide", initial_sidebar_state="auto")
+file_saved = st.file_uploader("Upload file:", accept_multiple_files=False)
 
 if file_saved:
     df = pd.read_excel(file_saved, skiprows=23, sheet_name="Amplification Data", engine="openpyxl")
