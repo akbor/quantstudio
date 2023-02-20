@@ -1,6 +1,9 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
 
-st.set_page_config(page_title="QuantStudio Analysis")
-file_saved = st.file_uploader("Upload file:", accept_multiple_files=False)
+st.set_page_config(page_title="QuantStudio Analysis", page_icon=":smile:", layout="wide", initial_sidebar_state="auto")
+file_saved = st.file_uploader("Upload file :sleeping: :", accept_multiple_files=False)
 
 if file_saved:
     df = pd.read_excel(file_saved, skiprows=23, sheet_name="Amplification Data", engine="openpyxl")
