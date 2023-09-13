@@ -16,6 +16,7 @@ if file_saved:
     color_map = {
         'TAMRA':'#a8328d',
         'JOE': '#00ad3d',
+        'ROX': '#00ad3d',
         'FAM': '#006ead',
         'AR101': '#ad0026', 
         'CY5': '#0510eb',
