@@ -1,2 +1,2 @@
-# streamlit-proto
-deploaye to <https://akbor-streamlit-proto-main-s2ah25.streamlit.app/>
+# Quantstudio Data Visualization
+deployed to https://quantstudio.streamlit.app/
