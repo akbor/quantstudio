@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import base64
 
 st.set_page_config(page_title="QuantStudio Analysis", page_icon=":smile:", layout="wide", initial_sidebar_state="auto")
 file_saved = st.file_uploader("Upload file :sleeping: :", accept_multiple_files=False)
