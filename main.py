@@ -34,7 +34,7 @@ if file_saved:
     target_selected = st.multiselect("Channel", target_names)
 
     def plot_figure(second_selection_df):
-        fig = px.line(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target', color_discrete_map=color_map)
+        fig = px.line(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
         fig.update_layout(xaxis_title='Cycle', yaxis_title='RFU', legend_title_text='')
         fig.update_layout(xaxis=dict(showgrid=False),
                 yaxis=dict(showgrid=False)
