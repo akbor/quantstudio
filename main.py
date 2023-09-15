@@ -58,18 +58,18 @@ if file_saved:
     
     st.info("If you want to display all the filter data for give well. Only select from wells menu")
 
-    if well_selector or target_selected:
-        if not target_selected:
-            first_df = df[df["Well Position"].isin(well_selector)]
-            a = plot_figure(first_df)
-          
-        if not well_selector:
-            st.info("please select a well!")
-        # print(target_selected)
-        if target_selected and well_selector:
-            second_selection_df = df[(df["Target"].isin(target_selected)) & (df["Well Position"].isin(well_selector))]
-#             a =plot_figure(second_selection_df)
-            # st.plotly_chart(a, theme=None, use_container_width=False)
+    if well_selector and not target_selected:
+        first_df = df[df["Well Position"].isin(well_selector)]
+        fig1 = plot_figure(first_df)
+        st.plotly_chart(fig1, theme=None, use_container_width=False)
+        
+    if not well_selector:
+        st.info("please select a well!")
+    # print(target_selected)
+    if target_selected and well_selector:
+        second_selection_df = df[(df["Target"].isin(target_selected)) & (df["Well Position"].isin(well_selector))]
+        fig2=plot_figure(second_selection_df)
+        st.plotly_chart(fig2, theme=None, use_container_width=False)
 
 else:
     st.info("Awaiting results file")
