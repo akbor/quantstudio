@@ -46,14 +46,14 @@ if file_saved:
         fig.update_xaxes(title_font_family="arial", color="black")
         fig.update_yaxes(title_font_family="arial", color="black")
         # Save the plot as SVG
-        fig.write_image("temp.svg", format="svg")
-        with open("temp.svg", "rb") as image:
-            image_binary = image.read()
-        b64 = base64.b64encode(image_binary).decode("utf-8")
-        download_url = f'data:image/svg+xml;base64,{b64}'
-        # Display the plot
-        st.plotly_chart(fig, theme=None, use_container_width=False)
-        st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
+        # fig.write_image("temp.svg", format="svg")
+        # with open("temp.svg", "rb") as image:
+        #     image_binary = image.read()
+        # b64 = base64.b64encode(image_binary).decode("utf-8")
+        # download_url = f'data:image/svg+xml;base64,{b64}'
+        # # Display the plot
+        # st.plotly_chart(fig, theme=None, use_container_width=False)
+        # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
         return fig
     
     st.info("If you want to display all the filter data for give well. Only select from wells menu")
