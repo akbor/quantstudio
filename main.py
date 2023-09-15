@@ -69,8 +69,8 @@ if file_saved:
     if target_selected and well_selector:
         second_selection_df = df[(df["Target"].isin(target_selected)) & (df["Well Position"].isin(well_selector))]
         fig2=plot_figure(second_selection_df)
-        # st.plotly_chart(fig2, theme=None, use_container_width=False)
-        st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
+        st.plotly_chart(fig2, theme=None, use_container_width=False)
+        # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
 
 else:
     st.info("Awaiting results file")
