@@ -14,7 +14,7 @@ def read_df1(path):
 def read_df2(path):
     return pd.read_excel(path, sheet_name="Amplification Data", nrows=22, header=None, engine="openpyxl", names=["names", "values"])
 
-if file_saved
+if file_saved:
     df = read_df1(file_saved)
     df2 = read_df2(file_saved)
     col1, col2 = st.columns(2)
