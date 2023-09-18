@@ -6,9 +6,17 @@ import base64
 st.set_page_config(page_title="QuantStudio Analysis", page_icon=":smile:", layout="wide", initial_sidebar_state="auto")
 file_saved = st.file_uploader("Upload file :sleeping: :", accept_multiple_files=False)
 
-if file_saved:
-    df = pd.read_excel(file_saved, skiprows=23, sheet_name="Amplification Data", engine="openpyxl")
-    df2 = pd.read_excel(file_saved, sheet_name="Amplification Data", nrows=22, header=None, engine="openpyxl", names=["names", "values"])
+@st.cache_data
+def read_df1(path):
+    return pd.read_excel(path, skiprows=23, sheet_name="Amplification Data", engine="openpyxl")
+
+@st.cache_data
+def read_df2(path):
+    return pd.read_excel(path, sheet_name="Amplification Data", nrows=22, header=None, engine="openpyxl", names=["names", "values"])
+
+if file_saved
+    df = read_df1(file_saved)
+    df2 = read_df2(file_saved)
     col1, col2 = st.columns(2)
     with col1:
         f"### Imported data", df
