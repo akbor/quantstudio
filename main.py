@@ -102,11 +102,38 @@ with tab2:
             for key, val in zip(header_list, k.split("\t")):
                 tbl_dict[key].append(val)
         df = pd.DataFrame(tbl_dict)
-        df
+        "## Data Entered"
+
+        st.write(df)
         # for more effienct see: https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-pandas-dataframe
         # i don't care about performance as the max rows will be <100. hence futile here.
-        for rows in df.iterrows():
-            for k in range(1, int(rows[1].Replicates)+1):
-                st.write(f"{rows[1]['Sample Name']} {rows[1].Concentration} {rows[1].Unit} rep {k}")
+        llll = []
+        try:
+            for rows in df.iterrows():
+                for k in range(1, int(rows[1].Replicates)+1):
+                    llll.append(f"{rows[1]['Sample Name']} {rows[1].Concentration} {rows[1].Unit} rep {k}")
 
-            
+            s =pd.Series(llll, name="Output Sequences")
+
+            "## Output"
+            st.write(s)
+        except AttributeError:
+            st.warning("One or more column name missing, following column should be present: 'Sample Name', 'Concentration', 'Unit', 'Replicates' See Example table")
+        
+    "## Example Data Table"
+    example = pd.DataFrame({
+
+        "Sample Name": ["Bacteria 1", "Bacteria 2", "Bacteria 3"],
+        "Concentration": [100, 200, 150],
+        "Unit": ["org/mL", "org/mL", "org/mL"],
+        "Replicates": [5, 3, 5]
+    }
+    )
+    st.write(example)
+
+    "### Example Output:"
+    ex_out = []
+    for rows in example.iterrows():
+        for k in range(1, int(rows[1].Replicates)+1):
+            ex_out.append(f"{rows[1]['Sample Name']} {rows[1].Concentration} {rows[1].Unit} rep {k}")
+    st.write(pd.Series(ex_out, name="Output Sequences"))
