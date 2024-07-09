@@ -13,6 +13,10 @@ with tab1:
     @st.cache_data
     def read_df1(path):
         return pd.read_excel(path, skiprows=23, sheet_name="Amplification Data", engine="openpyxl")
+    
+    @st.cache_data
+    def read_df_results(path):
+        return pd.read_excel(path, skiprows=23, sheet_name="Results", engine="openpyxl")
 
     @st.cache_data
     def read_df2(path):
@@ -36,6 +40,7 @@ with tab1:
             'A550': '#3fb518',
             'A680': '#e30bd8',
             'HEX': '#053ef2',
+            'VIC': '#053ef2',
             'A647N': '#515751',
             'A647': '#515751'
             }
@@ -66,6 +71,18 @@ with tab1:
             # st.plotly_chart(fig, theme=None, use_container_width=False)
             # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
             return fig
+        def plot_figure2(df):
+            fig = px.line(data_frame=df, x='Cycle Number', y='dRn', line_group='Well Position', color='Reporter', color_discrete_map=color_map)
+            fig.update_layout(xaxis_title='Cycle', yaxis_title='RFU', legend_title_text='')
+            fig.update_layout(xaxis=dict(showgrid=False),
+                    yaxis=dict(showgrid=False)
+                    )
+            fig.update_layout(legend=dict(x=0.5, y=-0.32, xanchor='center', yanchor='top'))
+            fig.update_layout(legend_orientation='h', font=dict(family="arial", size=18,color="black"))
+            fig.update_layout(autosize=False, width=800, height=500, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+            fig.update_xaxes(title_font_family="arial", color="black")
+            fig.update_yaxes(title_font_family="arial", color="black")
+            return fig
         
         st.info("If you want to display all the filter data for give well. Only select from wells menu")
 
@@ -82,6 +99,28 @@ with tab1:
             fig2=plot_figure(second_selection_df)
             st.plotly_chart(fig2, theme=None, use_container_width=False)
             # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
+
+        f"## Dataframe - Guessing Group Data"
+        df["TargetName"] = df.Sample.str.split("_", expand=True).get(0)
+        df["Concentration"]=df.Sample.str.split("_", expand=True).get(2)
+        df["Groups"] = df.TargetName.str.cat(df.Concentration,na_rep="", sep=" ")
+        df
+        groups = st.multiselect("Potential Groups", df.Groups.unique())
+        print(groups)
+        # if groups:
+        #     subset = df[df["Groups"].isin(groups)]
+        #     sub_fig = plot_figure(subset)
+        #     st.plotly_chart(sub_fig,use_container_width=True)
+
+        f"## Results Data - for Thresholds and Channel info"
+        ret = read_df_results(file_saved)
+        new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
+        new
+        if groups:
+            subset = new[new["Groups"].isin(groups)]
+            sub_fig = plot_figure2(subset)
+            st.plotly_chart(sub_fig,use_container_width=True)
+        
 
     else:
         st.info("Awaiting results file")
