@@ -107,9 +107,9 @@ with tab1:
             # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
             return fig
 
-        def plot_figure2(df, colormappings):
+        def plot_figure2(DataFrame, colormappings):
             target_thresholds = (
-                new.groupby("Target")["Threshold"].unique().apply(list).to_dict()
+                DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
             )
             fig = px.line(
                 data_frame=df,
@@ -257,7 +257,7 @@ with tab1:
                 displaylogo=False,
                 toImageButtonOptions={
                     "format": "svg",
-                    "filename": " ".join(groups, targets),
+                    "filename": " ".join((groups+targets)),
                 },
                 modeBarButtonsToRemove=[
                     "select2d",
