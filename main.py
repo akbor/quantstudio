@@ -222,9 +222,6 @@ with tab1:
         f"## Results Data - for Thresholds and Channel info"
         ret = read_df_results(file_saved)
         new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
-
-        new
-
         target_reporter = (
             new.groupby("Target")["Reporter"].unique().apply(list).to_dict()
         )
