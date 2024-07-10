@@ -112,7 +112,7 @@ with tab1:
                 DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
             )
             fig = px.line(
-                data_frame=df,
+                data_frame=DataFrame,
                 x="Cycle Number",
                 y="dRn",
                 line_group="Well Position",
@@ -233,7 +233,7 @@ with tab1:
             k: color_map.get(v[0]) for k, v in target_reporter.items()
         }
 
-        if groups:
+        if groups and not targets:
             config = dict(
                 displaylogo=False,
                 toImageButtonOptions={
@@ -270,7 +270,7 @@ with tab1:
             )
             subset2 = new[(new["Groups"].isin(groups)) & (new["Target"].isin(targets))]
             sub_fig2 = plot_figure2(subset2, target_color_mappings)
-            st.plotly_chart(sub_fig2, use_container_width=False, config=config)
+            second = st.plotly_chart(sub_fig2, use_container_width=False, config=config)
     else:
         st.info("Awaiting results file")
 with tab2:
