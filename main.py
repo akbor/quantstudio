@@ -207,7 +207,7 @@ with tab1:
             # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
 
         f"## Dataframe - Guessing Group Data"
-        df["TargetName"] = df.Sample.str.speelit("_", expand=True).get(0)
+        df["TargetName"] = df.Sample.str.split("_", expand=True).get(0)
         df["Concentration"] = df.Sample.str.split("_", expand=True).get(2)
         df["Groups"] = df.TargetName.str.cat(df.Concentration, na_rep="", sep=" ")
         df
@@ -252,7 +252,25 @@ with tab1:
             subset = new[new["Groups"].isin(groups)]
             sub_fig = plot_figure2(subset, target_color_mappings)
             st.plotly_chart(sub_fig, use_container_width=False, config=config)
-
+        if groups and targets:
+            config = dict(
+                displaylogo=False,
+                toImageButtonOptions={
+                    "format": "svg",
+                    "filename": " ".join(groups, targets),
+                },
+                modeBarButtonsToRemove=[
+                    "select2d",
+                    "lasso2d",
+                ],
+                modeBarButtonsToAdd=[
+                    "drawline",
+                    "eraseshape",
+                ],
+            )
+            subset2 = new[(new["Groups"].isin(groups)) & (new["Target"].isin(targets))]
+            sub_fig2 = plot_figure2(subset2, target_color_mappings)
+            st.plotly_chart(sub_fig2, use_container_width=False, config=config)
     else:
         st.info("Awaiting results file")
 with tab2:
