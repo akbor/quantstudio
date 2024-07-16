@@ -2,17 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import base64
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 st.set_page_config(
     page_title="QuantStudio Analysis",
-    page_icon=":smile:",
+    page_icon=":rocket:",
     layout="wide",
     initial_sidebar_state="auto",
 )
 
 tab1, tab2 = st.tabs(["QuantStudio", "Name Generator"])
 with tab1:
-
+    f"#### From Design Analysis software use Default export setting and tick 'Combine to one excel file' option"
     file_saved = st.file_uploader(
         "Upload file :sleeping: :", accept_multiple_files=False
     )
@@ -64,8 +66,9 @@ with tab1:
         well_names = df["Well Position"].unique()
         target_names = df["Target"].unique()
         # print(target_names)
+        f"## Figures based on Target & Well position"
         well_selector = st.multiselect("Wells", well_names)
-        target_selected = st.multiselect("Channel", target_names)
+        target_selected = st.multiselect("Channel/Target", target_names)
 
         def plot_figure(second_selection_df):
             fig = px.line(
@@ -107,10 +110,11 @@ with tab1:
             # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
             return fig
 
-        def plot_figure2(DataFrame, colormappings):
+        def plot_figure2(DataFrame: pd.DataFrame, colormappings, title=False):
             target_thresholds = (
                 DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
             )
+            group_list = DataFrame.Groups.unique()
             fig = px.line(
                 data_frame=DataFrame,
                 x="Cycle Number",
@@ -182,6 +186,102 @@ with tab1:
                 ticklen=10,
                 tickcolor="black",
             )
+            if title:
+                fig.update_layout(
+                    title= dict(
+                        text=f"{', '.join(group_list)}",
+                        x=0.5,
+                        xanchor="center",
+                        yanchor="bottom"
+                    )
+                )
+
+            return fig
+        def subplot_maker(DataFrame: pd.DataFrame, colormappings, title=False):
+            target_thresholds = (
+                DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
+            )
+            group_list = DataFrame.Groups.unique()
+            fig = go.line(
+                data_frame=DataFrame,
+                x="Cycle Number",
+                y="dRn",
+                line_group="Well Position",
+                color="Target",
+                color_discrete_map=colormappings,
+            )
+            fig.update_layout(
+                xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
+            )
+            fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+            fig.update_layout(
+                legend=dict(x=0.5, y=-0.2, xanchor="center", yanchor="top")
+            )
+            fig.update_layout(
+                legend_orientation="h",
+                font=dict(family="arial", size=18, color="black"),
+            )
+            fig.update_layout(
+                autosize=False,
+                width=800,
+                height=500,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+            fig.update_xaxes(title_font_family="arial", color="black")
+            fig.update_yaxes(title_font_family="arial", color="black")
+            fig.update_traces(line={"width": 1})
+            for target, threshold in target_thresholds.items():
+                fig.add_hline(
+                    y=threshold[0],
+                    line_color=colormappings.get(target),
+                    line_width=1,
+                    annotation_text=f"{threshold[0]}",
+                    annotation_position="top left",
+                    annotation_font_size=12,
+                    annotation_font_color="#ffffff",
+                    annotation=dict(
+                        x=0.05,
+                        xref="paper",
+                        y=threshold[0],
+                        yref="y",
+                        showarrow=False,
+                        text=f"{threshold[0]}",
+                        bgcolor=colormappings.get(target),
+                        bordercolor=colormappings.get(target),
+                        borderwidth=1,
+                        opacity=0.8,
+                    ),
+                )
+            fig.update_xaxes(
+                showline=True,
+                linewidth=1,
+                linecolor="black",
+                mirror=False,
+                ticks="outside",
+                tickwidth=1,
+                ticklen=10,
+                tickcolor="black",
+            )
+            fig.update_yaxes(
+                showline=True,
+                linewidth=1,
+                linecolor="black",
+                mirror=False,
+                ticks="outside",
+                tickwidth=1,
+                ticklen=10,
+                tickcolor="black",
+            )
+            if title:
+                fig.update_layout(
+                    title= dict(
+                        text=f"{', '.join(group_list)}",
+                        x=0.5,
+                        xanchor="center",
+                        yanchor="bottom"
+                    )
+                )
 
             return fig
 
@@ -206,22 +306,36 @@ with tab1:
             st.plotly_chart(fig2, theme=None, use_container_width=False)
             # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
 
-        f"## Dataframe - Guessing Group Data"
-        df["TargetName"] = df.Sample.str.split("_", expand=True).get(0)
+        def positive_ntc_group(row: str) -> str:
+            if row.lower().startswith("negative"):
+                return "Negatives"
+            elif row.lower().startswith("pc") or row.lower().startswith("positive"):
+                return "Positives"
+            elif row.lower().startswith("npc"):
+                return "NPCs"
+            elif row.lower().startswith("ntc"):
+                return "NTCs"
+            else:
+                return row
+        # f"## Dataframe - Guessing Group Data"
+        df["TargetName"] = df.Sample.str.split("_", expand=True).get(0).map(positive_ntc_group)
         df["Concentration"] = df.Sample.str.split("_", expand=True).get(2)
         df["Groups"] = df.TargetName.str.cat(df.Concentration, na_rep="", sep=" ")
-        df
+        f"## Figures based Groups"
         groups = st.multiselect("Potential Groups", df.Groups.unique())
         targets = st.multiselect("Target", df.Target.unique())
-        print(groups)
+        # print(groups)
         # if groups:
         #     subset = df[df["Groups"].isin(groups)]
         #     sub_fig = plot_figure(subset)
         #     st.plotly_chart(sub_fig,use_container_width=True)
 
-        f"## Results Data - for Thresholds and Channel info"
+        # f"## Results Data - for Thresholds and Channel info"
         ret = read_df_results(file_saved)
         new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
+
+        # new
+
         target_reporter = (
             new.groupby("Target")["Reporter"].unique().apply(list).to_dict()
         )
@@ -240,11 +354,7 @@ with tab1:
                 modeBarButtonsToRemove=[
                     "select2d",
                     "lasso2d",
-                ],
-                modeBarButtonsToAdd=[
-                    "drawline",
-                    "eraseshape",
-                ],
+                ]
             )
             subset = new[new["Groups"].isin(groups)]
             sub_fig = plot_figure2(subset, target_color_mappings)
@@ -260,14 +370,42 @@ with tab1:
                     "select2d",
                     "lasso2d",
                 ],
-                modeBarButtonsToAdd=[
-                    "drawline",
-                    "eraseshape",
-                ],
             )
             subset2 = new[(new["Groups"].isin(groups)) & (new["Target"].isin(targets))]
-            sub_fig2 = plot_figure2(subset2, target_color_mappings)
+            sub_fig2 = plot_figure2(subset2, target_color_mappings,title=True)
             second = st.plotly_chart(sub_fig2, use_container_width=False, config=config)
+        
+        
+        f"## Figures based on Targets per Group"
+        secondtargets = st.multiselect(f"## Targets",df.Target.unique(), key="second")
+        
+        # sub_fig = make_subplots(rows= 5, cols=1,shared_xaxes=False, shared_yaxes=False)
+        # for idx, grp in enumerate(new.Groups.unique(),1):
+        #     grps = new[new["Groups"].isin([grp])]
+        #     figs = plot_figure2(grps, target_color_mappings,title=True)
+        #     for fig in figs.data:
+        #         sub_fig.add_trace(fig, row=idx, col=1)
+        if secondtargets:
+            for idx, grp in enumerate(new.Groups.unique(),1):
+                grps = new[new["Groups"].isin([grp]) & (new["Target"].isin(secondtargets))]
+                if grps.size >0:
+                    config = dict(
+                    displaylogo=False,
+                    toImageButtonOptions={
+                        "format": "png",
+                        "scale": 10,
+                        "filename": " ".join(([grp]+secondtargets)),
+                    },
+                    modeBarButtonsToRemove=[
+                        "select2d",
+                        "lasso2d",
+                    ],
+                )
+                    figs = plot_figure2(grps, target_color_mappings,title=True)
+                    st.plotly_chart(figs,use_container_width=False,config=config)
+            
+                
+            
     else:
         st.info("Awaiting results file")
 with tab2:
