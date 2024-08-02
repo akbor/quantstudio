@@ -65,18 +65,15 @@ with tab1:
         }
         well_names = df["Well Position"].unique()
         target_names = df["Target"].unique()
-        # print(target_names)
-        f"## Figures based on Target & Well position"
-        well_selector = st.multiselect("Wells", well_names)
-        target_selected = st.multiselect("Channel/Target", target_names)
 
-        def plot_figure(second_selection_df):
+        def plot_figure(second_selection_df, colormappings):
             fig = px.line(
                 data_frame=second_selection_df,
                 x="Cycle Number",
                 y="dRn",
                 line_group="Well Position",
                 color="Target",
+                color_discrete_map=colormappings
             )
             fig.update_layout(
                 xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
@@ -110,11 +107,11 @@ with tab1:
             # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
             return fig
 
-        def plot_figure2(DataFrame: pd.DataFrame, colormappings, title=False):
+        def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
             target_thresholds = (
                 DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
             )
-            group_list = DataFrame.Groups.unique()
+            group_list = DataFrame[group_title].unique()
             fig = px.line(
                 data_frame=DataFrame,
                 x="Cycle Number",
@@ -186,7 +183,7 @@ with tab1:
                 ticklen=10,
                 tickcolor="black",
             )
-            if title:
+            if group_title:
                 fig.update_layout(
                     title= dict(
                         text=f"{', '.join(group_list)}",
@@ -284,27 +281,8 @@ with tab1:
                 )
 
             return fig
+                # print(target_names)
 
-        st.info(
-            "If you want to display all filter data for given well. Only select from wells menu"
-        )
-
-        if well_selector and not target_selected:
-            first_df = df[df["Well Position"].isin(well_selector)]
-            fig1 = plot_figure(first_df)
-            st.plotly_chart(fig1, theme=None, use_container_width=False)
-
-        if not well_selector:
-            st.info("please select a well!")
-        # print(target_selected)
-        if target_selected and well_selector:
-            second_selection_df = df[
-                (df["Target"].isin(target_selected))
-                & (df["Well Position"].isin(well_selector))
-            ]
-            fig2 = plot_figure(second_selection_df)
-            st.plotly_chart(fig2, theme=None, use_container_width=False)
-            # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
 
         def positive_ntc_group(row: str) -> str:
             if row.lower().startswith("negative"):
@@ -320,21 +298,26 @@ with tab1:
         # f"## Dataframe - Guessing Group Data"
         df["TargetName"] = df.Sample.str.split("_", expand=True).get(0).map(positive_ntc_group)
         df["Concentration"] = df.Sample.str.split("_", expand=True).get(2)
+        df["Conditions"] = df.Sample.str.split("_", expand=True).get(4)
+        df["Isolates"] = df.Sample.str.split("_", expand=True).get(1)
         df["Groups"] = df.TargetName.str.cat(df.Concentration, na_rep="", sep=" ")
-        f"## Figures based Groups"
-        groups = st.multiselect("Potential Groups", df.Groups.unique())
-        targets = st.multiselect("Target", df.Target.unique())
-        # print(groups)
-        # if groups:
-        #     subset = df[df["Groups"].isin(groups)]
-        #     sub_fig = plot_figure(subset)
-        #     st.plotly_chart(sub_fig,use_container_width=True)
+        df["GroupsCondition"] = df.TargetName.str.cat([df.Concentration,df.Conditions], na_rep="", sep=" ")
+        df["GroupsConditionIsolates"] = df.TargetName.str.cat([df.Concentration,df.Conditions, df.Isolates], na_rep="", sep=" ")
+        
+        # f"## Figures based Groups"
+        # groups = st.multiselect("Potential Groups", df.Groups.unique())
+        # targets = st.multiselect("Target", df.Target.unique())
+        # # print(groups)
+        # # if groups:
+        # #     subset = df[df["Groups"].isin(groups)]
+        # #     sub_fig = plot_figure(subset)
+        # #     st.plotly_chart(sub_fig,use_container_width=True)
 
-        # f"## Results Data - for Thresholds and Channel info"
+        # # f"## Results Data - for Thresholds and Channel info"
         ret = read_df_results(file_saved)
         new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
 
-        # new
+        # # new
 
         target_reporter = (
             new.groupby("Target")["Reporter"].unique().apply(list).to_dict()
@@ -343,40 +326,73 @@ with tab1:
         target_color_mappings = {
             k: color_map.get(v[0]) for k, v in target_reporter.items()
         }
+        
+        f"## Figures based on Target & Well position"
+        well_selector = st.multiselect("Wells", well_names)
+        target_selected = st.multiselect("Channel/Target", target_names)
+        
+        
+        st.info(
+            "If you want to display all filter data for given well. Only select from wells menu"
+        )
 
-        if groups and not targets:
-            config = dict(
-                displaylogo=False,
-                toImageButtonOptions={
-                    "format": "svg",
-                    "filename": " ".join(groups),
-                },
-                modeBarButtonsToRemove=[
-                    "select2d",
-                    "lasso2d",
-                ]
-            )
-            subset = new[new["Groups"].isin(groups)]
-            sub_fig = plot_figure2(subset, target_color_mappings)
-            st.plotly_chart(sub_fig, use_container_width=False, config=config)
-        if groups and targets:
-            config = dict(
-                displaylogo=False,
-                toImageButtonOptions={
-                    "format": "svg",
-                    "filename": " ".join((groups+targets)),
-                },
-                modeBarButtonsToRemove=[
-                    "select2d",
-                    "lasso2d",
-                ],
-            )
-            subset2 = new[(new["Groups"].isin(groups)) & (new["Target"].isin(targets))]
-            sub_fig2 = plot_figure2(subset2, target_color_mappings,title=True)
-            second = st.plotly_chart(sub_fig2, use_container_width=False, config=config)
+        if well_selector and not target_selected:
+            first_df = df[df["Well Position"].isin(well_selector)]
+            fig1 = plot_figure(first_df,target_color_mappings)
+            st.plotly_chart(fig1, theme=None, use_container_width=False)
+
+        if not well_selector:
+            st.info("please select a well!")
+        # print(target_selected)
+        if target_selected and well_selector:
+            second_selection_df = df[
+                (df["Target"].isin(target_selected))
+                & (df["Well Position"].isin(well_selector))
+            ]
+            fig2 = plot_figure(second_selection_df,target_color_mappings)
+            st.plotly_chart(fig2, theme=None, use_container_width=False)
+            # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
+                    
         
         
-        f"## Figures based on Targets per Group"
+        
+        
+        
+        
+
+        # if groups and not targets:
+        #     config = dict(
+        #         displaylogo=False,
+        #         toImageButtonOptions={
+        #             "format": "svg",
+        #             "filename": " ".join(groups),
+        #         },
+        #         modeBarButtonsToRemove=[
+        #             "select2d",
+        #             "lasso2d",
+        #         ]
+        #     )
+        #     subset = new[new["Groups"].isin(groups)]
+        #     sub_fig = plot_figure2(subset, target_color_mappings)
+        #     st.plotly_chart(sub_fig, use_container_width=False, config=config)
+        # if groups and targets:
+        #     config = dict(
+        #         displaylogo=False,
+        #         toImageButtonOptions={
+        #             "format": "svg",
+        #             "filename": " ".join((groups+targets)),
+        #         },
+        #         modeBarButtonsToRemove=[
+        #             "select2d",
+        #             "lasso2d",
+        #         ],
+        #     )
+        #     subset2 = new[(new["Groups"].isin(groups)) & (new["Target"].isin(targets))]
+        #     sub_fig2 = plot_figure2(subset2, target_color_mappings,title=True)
+        #     second = st.plotly_chart(sub_fig2, use_container_width=False, config=config)
+        
+        
+        f"## Figures based on Concentration"
         secondtargets = st.multiselect(f"## Targets",df.Target.unique(), key="second")
         
         # sub_fig = make_subplots(rows= 5, cols=1,shared_xaxes=False, shared_yaxes=False)
@@ -401,10 +417,65 @@ with tab1:
                         "lasso2d",
                     ],
                 )
-                    figs = plot_figure2(grps, target_color_mappings,title=True)
+                    figs = plot_figure2(grps, target_color_mappings,group_title="Groups")
+                    st.plotly_chart(figs,use_container_width=False,config=config)
+        f"## Figures based on Concentration & Condition"
+        conentrationAndCondition = st.multiselect(f"## Targets",df.Target.unique(), key="third")
+        
+        # sub_fig = make_subplots(rows= 5, cols=1,shared_xaxes=False, shared_yaxes=False)
+        # for idx, grp in enumerate(new.Groups.unique(),1):
+        #     grps = new[new["Groups"].isin([grp])]
+        #     figs = plot_figure2(grps, target_color_mappings,title=True)
+        #     for fig in figs.data:
+        #         sub_fig.add_trace(fig, row=idx, col=1)
+        # new
+        if conentrationAndCondition:
+            for idx, grp in enumerate(new.GroupsCondition.unique(),1):
+                print(grp)
+                grps = new[new["GroupsCondition"].isin([grp]) & (new["Target"].isin(conentrationAndCondition))]
+                if grps.size >0:
+                    config = dict(
+                    displaylogo=False,
+                    toImageButtonOptions={
+                        "format": "png",
+                        "scale": 10,
+                        "filename": " ".join(([grp]+conentrationAndCondition)),
+                    },
+                    modeBarButtonsToRemove=[
+                        "select2d",
+                        "lasso2d",
+                    ],
+                )
+                    figs = plot_figure2(grps, target_color_mappings, group_title="GroupsCondition")
                     st.plotly_chart(figs,use_container_width=False,config=config)
             
-                
+        f"## Figures based on Concentration, Condition & Isolates"
+        conentrationAndConditionAndIsolates = st.multiselect(f"## Targets",df.Target.unique(), key="fourth")
+        
+        # sub_fig = make_subplots(rows= 5, cols=1,shared_xaxes=False, shared_yaxes=False)
+        # for idx, grp in enumerate(new.Groups.unique(),1):
+        #     grps = new[new["Groups"].isin([grp])]
+        #     figs = plot_figure2(grps, target_color_mappings,title=True)
+        #     for fig in figs.data:
+        #         sub_fig.add_trace(fig, row=idx, col=1)
+        if conentrationAndConditionAndIsolates:
+            for idx, grp in enumerate(new.GroupsConditionIsolates.unique(),1):
+                grps = new[new["GroupsConditionIsolates"].isin([grp]) & (new["Target"].isin(conentrationAndConditionAndIsolates))]
+                if grps.size >0:
+                    config = dict(
+                    displaylogo=False,
+                    toImageButtonOptions={
+                        "format": "png",
+                        "scale": 10,
+                        "filename": " ".join(([grp]+conentrationAndConditionAndIsolates)),
+                    },
+                    modeBarButtonsToRemove=[
+                        "select2d",
+                        "lasso2d",
+                    ],
+                )
+                    figs = plot_figure2(grps, target_color_mappings,group_title="GroupsConditionIsolates")
+                    st.plotly_chart(figs,use_container_width=False,config=config)        
             
     else:
         st.info("Awaiting results file")
