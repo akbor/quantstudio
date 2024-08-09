@@ -1,5 +1,34 @@
 import plotly.express as px
 import pandas as pd
+import fileinput
+
+def handleMissingCycles(file) -> None:
+    line = open(file=file, mode='r').readlines()[0].split("\t")
+    header_head = []
+    for i in line:
+        header_head.append(i.rstrip())
+        
+    
+    actual_lenght = None
+    
+    with open(file=file,mode='r') as handle:
+        for line in handle.readlines():
+            if line.split("\t").__len__()>7:
+                actual_lenght = line.split("\t").__len__()
+                break
+    cycles = [str(i) for i in range(1, actual_lenght - 6)] # -6 because there are 7 headers at first before cycles. Range is excuslive of last value
+    ret = header_head + cycles
+    ret [-1] = ret[-1] + "\n"
+    headerLine = "\t".join(ret)
+    
+    with fileinput.FileInput(files=file, inplace=True) as f:
+        for line in f:
+            if f.isfirstline():
+                print(headerLine, end="")
+            else:
+                print(line, end="")
+    
+    return
 
 def positive_ntc_group(row: str) -> str:
     if row.lower().startswith("negative"):
