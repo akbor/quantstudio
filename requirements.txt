@@ -4,3 +4,4 @@ plotly
 seaborn
 openpyxl
 kaleido
+rdmlpython
