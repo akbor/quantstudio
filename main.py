@@ -90,7 +90,7 @@ with tab1:
                     )
                     )
                     print(f"removing: {f}.csv")
-                    os.remove(f"{f}.csv")
+                    # os.remove(f"{f}.csv")
                     print(f"removed: {f}.csv")
                 except Exception:
                     print("Hanlding mising cycles")
@@ -110,7 +110,7 @@ with tab1:
                     )
 
                     print(f"removing: {f}.csv")
-                    os.remove(f"{f}.csv")
+                    # os.remove(f"{f}.csv")
                     print(f"removed: {f}.csv")
 
 
