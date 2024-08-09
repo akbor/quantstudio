@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utility import plot_figure, plot_figure2, positive_ntc_group, handleMissingCycles
+from utility import plot_figure, plot_figure2, plot_figure3,positive_ntc_group, handleMissingCycles
 import rdmlpython
 run = rdmlpython.Rdml()
 import os
@@ -32,6 +32,43 @@ color_map = {
 @st.cache_data
 def read_rdml(l) -> pd.DataFrame:
     return pd.concat(l)
+
+@st.cache_data
+def read_rdml_file(filepath) -> pd.DataFrame:
+    try:
+        df = pd.read_csv(filepath, sep="\t", header=0)
+        print(f"INFO: removing - {f}.csv")
+        os.remove(f"{f}.csv")
+        return df.melt(
+            id_vars=df.columns[:7],
+            value_vars=df.columns[7:],
+            var_name="Cycle Number",
+            value_name="dRn"
+        ).rename(columns=
+            {"Well":"Well Position",
+            "Dye": "Reporter"}
+        )
+        # print(f"removed: {f}.csv")
+    except Exception:
+        print("Hanlding mising cycles")
+
+        handleMissingCycles(f"{f}.csv")
+
+        df = pd.read_csv(filepath, sep="\t", header=0)
+        os.remove(f"{f}.csv")
+        print(f"INFO: removing - {f}.csv")
+        return df.melt(
+            id_vars=df.columns[:7],
+            value_vars=df.columns[7:],
+            var_name="Cycle Number",
+            value_name="dRn"
+        ).rename(columns=
+            {"Well":"Well Position",
+            "Dye": "Reporter"}
+        )
+    
+
+        # print(f"removing: {f}.csv")
 
 @st.cache_data
 def read_df1(path):
@@ -77,44 +114,7 @@ with tab1:
                         with open(f"{r.tojson()['id']}.csv", "w") as f:
                             f.write(data)
             for f in files:
-                try:
-                    df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
-                    dfs.append(df.melt(
-                        id_vars=df.columns[:7],
-                        value_vars=df.columns[7:],
-                        var_name="Cycle Number",
-                        value_name="dRn"
-                    ).rename(columns=
-                        {"Well":"Well Position",
-                        "Dye": "Reporter"}
-                    )
-                    )
-                    print(f"removing: {f}.csv")
-                    # os.remove(f"{f}.csv")
-                    print(f"removed: {f}.csv")
-                except Exception:
-                    print("Hanlding mising cycles")
-
-                    handleMissingCycles(f"{f}.csv")
-
-                    df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
-                    dfs.append(df.melt(
-                        id_vars=df.columns[:7],
-                        value_vars=df.columns[7:],
-                        var_name="Cycle Number",
-                        value_name="dRn"
-                    ).rename(columns=
-                        {"Well":"Well Position",
-                        "Dye": "Reporter"}
-                    )
-                    )
-
-                    print(f"removing: {f}.csv")
-                    # os.remove(f"{f}.csv")
-                    print(f"removed: {f}.csv")
-
-
-                    
+                dfs.append(read_rdml_file(filepath=f"{f}.csv"))                    
             df = read_rdml(dfs)
         else:
             RDLM = False
@@ -162,31 +162,31 @@ with tab1:
         target_color_mappings = {
             k: color_map.get(v[0]) for k, v in target_reporter.items()
         }
-        
-        f"## Figures based on Target & Well position"
-        well_selector = st.multiselect("Wells", well_names)
-        target_selected = st.multiselect("Channel/Target", target_names)
-        
-        st.info(
-            "If you want to display all filter data for given well. Only select from wells menu"
-        )
+        if not RDLM:
+            f"## Figures based on Target & Well position"
+            well_selector = st.multiselect("Wells", well_names)
+            target_selected = st.multiselect("Channel/Target", target_names)
+            
+            st.info(
+                "If you want to display all filter data for given well. Only select from wells menu"
+            )
 
-        if well_selector and not target_selected:
-            first_df = df[df["Well Position"].isin(well_selector)]
-            fig1 = plot_figure(first_df,target_color_mappings)
-            st.plotly_chart(fig1, theme=None, use_container_width=False)
+            if well_selector and not target_selected:
+                first_df = df[df["Well Position"].isin(well_selector)]
+                fig1 = plot_figure(first_df,target_color_mappings)
+                st.plotly_chart(fig1, theme=None, use_container_width=False)
 
-        if not well_selector:
-            st.info("please select a well!")
-        # print(target_selected)
-        if target_selected and well_selector:
-            second_selection_df = df[
-                (df["Target"].isin(target_selected))
-                & (df["Well Position"].isin(well_selector))
-            ]
-            fig2 = plot_figure(second_selection_df,target_color_mappings)
-            st.plotly_chart(fig2, theme=None, use_container_width=False)
-            # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
+            if not well_selector:
+                st.info("please select a well!")
+            # print(target_selected)
+            if target_selected and well_selector:
+                second_selection_df = df[
+                    (df["Target"].isin(target_selected))
+                    & (df["Well Position"].isin(well_selector))
+                ]
+                fig2 = plot_figure(second_selection_df,target_color_mappings)
+                st.plotly_chart(fig2, theme=None, use_container_width=False)
+                # st.plotly_chart(data_frame=second_selection_df, x='Cycle Number', y='dRn', line_group='Well Position', color='Target')
                     
         
         
@@ -226,7 +226,16 @@ with tab1:
         #     sub_fig2 = plot_figure2(subset2, target_color_mappings,title=True)
         #     second = st.plotly_chart(sub_fig2, use_container_width=False, config=config)
         
-        
+        f"## Figures based on Target"
+        basedOnTarget = st.multiselect("Targets", target_names, key="basedOnTargets")
+        if basedOnTarget:
+            # f"{basedOnTarget}"
+            df_basedOnTarget = new[new['Target'].isin(basedOnTarget)]
+            figs = plot_figure3(df_basedOnTarget, target_color_mappings,title_list=basedOnTarget)
+            st.plotly_chart(figs,use_container_width=False)
+
+
+
         f"## Figures based on Concentration"
         secondtargets = st.multiselect(f"## Targets",df.Target.unique(), key="second")
         

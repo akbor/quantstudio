@@ -172,3 +172,94 @@ def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
         )
 
     return fig
+
+def plot_figure3(DataFrame: pd.DataFrame, colormappings, title_list: list):
+    try:
+        target_thresholds = (
+            DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
+        )
+    except KeyError:
+        target_thresholds =None
+    fig = px.line(
+        data_frame=DataFrame,
+        x="Cycle Number",
+        y="dRn",
+        line_group="Well Position",
+        color="Target",
+        color_discrete_map=colormappings,
+    )
+    fig.update_layout(
+        xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
+    )
+    fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+    fig.update_layout(
+        legend=dict(x=0.5, y=-0.2, xanchor="center", yanchor="top")
+    )
+    fig.update_layout(
+        legend_orientation="h",
+        font=dict(family="arial", size=18, color="black"),
+    )
+    fig.update_layout(
+        autosize=False,
+        width=800,
+        height=500,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_xaxes(title_font_family="arial", color="black")
+    fig.update_yaxes(title_font_family="arial", color="black")
+    fig.update_traces(line={"width": 1})
+    if target_thresholds:
+        for target, threshold in target_thresholds.items():
+            fig.add_hline(
+                y=threshold[0],
+                line_color=colormappings.get(target),
+                line_width=1,
+                annotation_text=f"{threshold[0]}",
+                annotation_position="top left",
+                annotation_font_size=12,
+                annotation_font_color="#ffffff",
+                annotation=dict(
+                    x=0.05,
+                    xref="paper",
+                    y=threshold[0],
+                    yref="y",
+                    showarrow=False,
+                    text=f"{threshold[0]}",
+                    bgcolor=colormappings.get(target),
+                    bordercolor=colormappings.get(target),
+                    borderwidth=1,
+                    opacity=0.8,
+                ),
+            )
+    fig.update_xaxes(
+        showline=True,
+        linewidth=1,
+        linecolor="black",
+        mirror=False,
+        ticks="outside",
+        tickwidth=1,
+        ticklen=10,
+        tickcolor="black",
+    )
+    fig.update_yaxes(
+        showline=True,
+        linewidth=1,
+        linecolor="black",
+        mirror=False,
+        ticks="outside",
+        tickwidth=1,
+        ticklen=10,
+        tickcolor="black",
+    )
+    if title_list:
+        fig.update_layout(
+            title= dict(
+                text=f"{', '.join(title_list)}",
+                x=0.5,
+                xanchor="center",
+                yanchor="bottom"
+            )
+        )
+
+    return fig
