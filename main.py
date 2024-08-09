@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import base64
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from utility import plot_figure, plot_figure2, positive_ntc_group
+import rdmlpython
+run = rdmlpython.Rdml()
+import os
+RDLM = False
 
 st.set_page_config(
     page_title="QuantStudio Analysis",
@@ -11,290 +12,100 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto",
 )
+color_map = {
+    "TAMRA": "#a8328d",
+    "JOE": "#a40000",
+    "ROX": "#a40000",
+    "Texas Red": "#a40000",
+    "FAM": "#1f76ba",
+    "AR101": "#ad0026",
+    "CY5": "#7a14a9",
+    "Cy5": "#7a14a9",
+    "CY5.5": "#eb7405",
+    "A550": "#3fb518",
+    "A680": "#e30bd8",
+    "HEX": "#187b27",
+    "VIC": "#187b27",
+    "A647N": "#515751",
+    "A647": "#515751",
+}
+@st.cache_data
+def read_rdml(l) -> pd.DataFrame:
+    return pd.concat(l)
 
+@st.cache_data
+def read_df1(path):
+    return pd.read_excel(
+        path, skiprows=23, sheet_name="Amplification Data", engine="openpyxl"
+    )
+
+@st.cache_data
+def read_df_results(path):
+    return pd.read_excel(path, skiprows=23, sheet_name="Results", engine="openpyxl")
+
+@st.cache_data
+def read_df2(path):
+    return pd.read_excel(
+        path,
+        sheet_name="Amplification Data",
+        nrows=22,
+        header=None,
+        engine="openpyxl",
+        names=["names", "values"],
+    )
+
+dfs = []
 tab1, tab2 = st.tabs(["QuantStudio", "Name Generator"])
 with tab1:
+    st.info("Supported files: .rdlm from CFX or default export from DA software")
     f"#### From Design Analysis software use Default export setting and tick 'Combine to one excel file' option"
     file_saved = st.file_uploader(
         "Upload file :sleeping: :", accept_multiple_files=False
     )
 
-    @st.cache_data
-    def read_df1(path):
-        return pd.read_excel(
-            path, skiprows=23, sheet_name="Amplification Data", engine="openpyxl"
-        )
-
-    @st.cache_data
-    def read_df_results(path):
-        return pd.read_excel(path, skiprows=23, sheet_name="Results", engine="openpyxl")
-
-    @st.cache_data
-    def read_df2(path):
-        return pd.read_excel(
-            path,
-            sheet_name="Amplification Data",
-            nrows=22,
-            header=None,
-            engine="openpyxl",
-            names=["names", "values"],
-        )
-
     if file_saved:
-        df = read_df1(file_saved)
-        df2 = read_df2(file_saved)
+        if file_saved.name.endswith(".rdml"):
+            run.load_any_zip(filename=file_saved)
+            RDLM=True
+            files = []
+            for exp in run.experiments():
+                for r in exp.runs():
+                    if r.tojson()['id'].startswith("Amp"):
+                        print(r.tojson()['id'])
+                        data = r.export_table("amp")
+                        files.append(r.tojson()['id'])
+                        with open(f"{r.tojson()['id']}.csv", "w") as f:
+                            f.write(data)
+            for f in files:
+                df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
+                dfs.append(df.melt(
+                    id_vars=df.columns[:7],
+                    value_vars=df.columns[7:],
+                    var_name="Cycle Number",
+                    value_name="dRn"
+                ).rename(columns=
+                    {"Well":"Well Position",
+                     "Dye": "Reporter"}
+                )
+                )
+                print(f"removing: {f}.csv")
+                os.remove(f"{f}.csv")
+                print(f"removed: {f}.csv")
+            df = read_rdml(dfs)
+        else:
+            RDLM = False
+            df = read_df1(file_saved)
+            df2 = read_df2(file_saved)
+
         col1, col2 = st.columns(2)
-        with col1:
-            f"### Imported data", df
-        with col2:
-            f"### File Info", df2
-        color_map = {
-            "TAMRA": "#a8328d",
-            "JOE": "#a40000",
-            "ROX": "#a40000",
-            "FAM": "#1f76ba",
-            "AR101": "#ad0026",
-            "CY5": "#7a14a9",
-            "CY5.5": "#eb7405",
-            "A550": "#3fb518",
-            "A680": "#e30bd8",
-            "HEX": "#187b27",
-            "VIC": "#187b27",
-            "A647N": "#515751",
-            "A647": "#515751",
-        }
+        if not RDLM:
+            with col1:
+                f"### Imported data", df
+            with col2:
+                f"### File Info", df2
         well_names = df["Well Position"].unique()
         target_names = df["Target"].unique()
 
-        def plot_figure(second_selection_df, colormappings):
-            fig = px.line(
-                data_frame=second_selection_df,
-                x="Cycle Number",
-                y="dRn",
-                line_group="Well Position",
-                color="Target",
-                color_discrete_map=colormappings
-            )
-            fig.update_layout(
-                xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
-            )
-            fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
-            fig.update_layout(
-                legend=dict(x=0.5, y=-0.32, xanchor="center", yanchor="top")
-            )
-            fig.update_layout(
-                legend_orientation="h",
-                font=dict(family="arial", size=18, color="black"),
-            )
-            fig.update_layout(
-                autosize=False,
-                width=800,
-                height=500,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-            )
-            fig.update_xaxes(title_font_family="arial", color="black")
-            fig.update_yaxes(title_font_family="arial", color="black")
-
-            # Save the plot as SVG
-            # fig.write_image("temp.svg", format="svg")
-            # with open("temp.svg", "rb") as image:
-            #     image_binary = image.read()
-            # b64 = base64.b64encode(image_binary).decode("utf-8")
-            # download_url = f'data:image/svg+xml;base64,{b64}'
-            # # Display the plot
-            # st.plotly_chart(fig, theme=None, use_container_width=False)
-            # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
-            return fig
-
-        def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
-            target_thresholds = (
-                DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
-            )
-            group_list = DataFrame[group_title].unique()
-            fig = px.line(
-                data_frame=DataFrame,
-                x="Cycle Number",
-                y="dRn",
-                line_group="Well Position",
-                color="Target",
-                color_discrete_map=colormappings,
-            )
-            fig.update_layout(
-                xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
-            )
-            fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
-            fig.update_layout(
-                legend=dict(x=0.5, y=-0.2, xanchor="center", yanchor="top")
-            )
-            fig.update_layout(
-                legend_orientation="h",
-                font=dict(family="arial", size=18, color="black"),
-            )
-            fig.update_layout(
-                autosize=False,
-                width=800,
-                height=500,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-            )
-            fig.update_xaxes(title_font_family="arial", color="black")
-            fig.update_yaxes(title_font_family="arial", color="black")
-            fig.update_traces(line={"width": 1})
-            for target, threshold in target_thresholds.items():
-                fig.add_hline(
-                    y=threshold[0],
-                    line_color=colormappings.get(target),
-                    line_width=1,
-                    annotation_text=f"{threshold[0]}",
-                    annotation_position="top left",
-                    annotation_font_size=12,
-                    annotation_font_color="#ffffff",
-                    annotation=dict(
-                        x=0.05,
-                        xref="paper",
-                        y=threshold[0],
-                        yref="y",
-                        showarrow=False,
-                        text=f"{threshold[0]}",
-                        bgcolor=colormappings.get(target),
-                        bordercolor=colormappings.get(target),
-                        borderwidth=1,
-                        opacity=0.8,
-                    ),
-                )
-            fig.update_xaxes(
-                showline=True,
-                linewidth=1,
-                linecolor="black",
-                mirror=False,
-                ticks="outside",
-                tickwidth=1,
-                ticklen=10,
-                tickcolor="black",
-            )
-            fig.update_yaxes(
-                showline=True,
-                linewidth=1,
-                linecolor="black",
-                mirror=False,
-                ticks="outside",
-                tickwidth=1,
-                ticklen=10,
-                tickcolor="black",
-            )
-            if group_title:
-                fig.update_layout(
-                    title= dict(
-                        text=f"{', '.join(group_list)}",
-                        x=0.5,
-                        xanchor="center",
-                        yanchor="bottom"
-                    )
-                )
-
-            return fig
-        def subplot_maker(DataFrame: pd.DataFrame, colormappings, title=False):
-            target_thresholds = (
-                DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
-            )
-            group_list = DataFrame.Groups.unique()
-            fig = go.line(
-                data_frame=DataFrame,
-                x="Cycle Number",
-                y="dRn",
-                line_group="Well Position",
-                color="Target",
-                color_discrete_map=colormappings,
-            )
-            fig.update_layout(
-                xaxis_title="Cycle", yaxis_title="RFU", legend_title_text=""
-            )
-            fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
-            fig.update_layout(
-                legend=dict(x=0.5, y=-0.2, xanchor="center", yanchor="top")
-            )
-            fig.update_layout(
-                legend_orientation="h",
-                font=dict(family="arial", size=18, color="black"),
-            )
-            fig.update_layout(
-                autosize=False,
-                width=800,
-                height=500,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-            )
-            fig.update_xaxes(title_font_family="arial", color="black")
-            fig.update_yaxes(title_font_family="arial", color="black")
-            fig.update_traces(line={"width": 1})
-            for target, threshold in target_thresholds.items():
-                fig.add_hline(
-                    y=threshold[0],
-                    line_color=colormappings.get(target),
-                    line_width=1,
-                    annotation_text=f"{threshold[0]}",
-                    annotation_position="top left",
-                    annotation_font_size=12,
-                    annotation_font_color="#ffffff",
-                    annotation=dict(
-                        x=0.05,
-                        xref="paper",
-                        y=threshold[0],
-                        yref="y",
-                        showarrow=False,
-                        text=f"{threshold[0]}",
-                        bgcolor=colormappings.get(target),
-                        bordercolor=colormappings.get(target),
-                        borderwidth=1,
-                        opacity=0.8,
-                    ),
-                )
-            fig.update_xaxes(
-                showline=True,
-                linewidth=1,
-                linecolor="black",
-                mirror=False,
-                ticks="outside",
-                tickwidth=1,
-                ticklen=10,
-                tickcolor="black",
-            )
-            fig.update_yaxes(
-                showline=True,
-                linewidth=1,
-                linecolor="black",
-                mirror=False,
-                ticks="outside",
-                tickwidth=1,
-                ticklen=10,
-                tickcolor="black",
-            )
-            if title:
-                fig.update_layout(
-                    title= dict(
-                        text=f"{', '.join(group_list)}",
-                        x=0.5,
-                        xanchor="center",
-                        yanchor="bottom"
-                    )
-                )
-
-            return fig
-                # print(target_names)
-
-
-        def positive_ntc_group(row: str) -> str:
-            if row.lower().startswith("negative"):
-                return "Negatives"
-            elif row.lower().startswith("pc") or row.lower().startswith("positive"):
-                return "Positives"
-            elif row.lower().startswith("npc"):
-                return "NPCs"
-            elif row.lower().startswith("ntc"):
-                return "NTCs"
-            else:
-                return row
         # f"## Dataframe - Guessing Group Data"
         df["TargetName"] = df.Sample.str.split("_", expand=True).get(0).map(positive_ntc_group)
         df["Concentration"] = df.Sample.str.split("_", expand=True).get(2)
@@ -314,10 +125,11 @@ with tab1:
         # #     st.plotly_chart(sub_fig,use_container_width=True)
 
         # # f"## Results Data - for Thresholds and Channel info"
-        ret = read_df_results(file_saved)
-        new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
-
-        # # new
+        if not RDLM:
+            ret = read_df_results(file_saved)
+            new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
+        else:
+            new = df
 
         target_reporter = (
             new.groupby("Target")["Reporter"].unique().apply(list).to_dict()
@@ -330,7 +142,6 @@ with tab1:
         f"## Figures based on Target & Well position"
         well_selector = st.multiselect("Wells", well_names)
         target_selected = st.multiselect("Channel/Target", target_names)
-        
         
         st.info(
             "If you want to display all filter data for given well. Only select from wells menu"
