@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utility import plot_figure, plot_figure2, positive_ntc_group
+from utility import plot_figure, plot_figure2, positive_ntc_group, handleMissingCycles
 import rdmlpython
 run = rdmlpython.Rdml()
 import os
@@ -70,27 +70,51 @@ with tab1:
             files = []
             for exp in run.experiments():
                 for r in exp.runs():
+                    # f"{r.tojson()}"
                     if r.tojson()['id'].startswith("Amp"):
-                        print(r.tojson()['id'])
                         data = r.export_table("amp")
                         files.append(r.tojson()['id'])
                         with open(f"{r.tojson()['id']}.csv", "w") as f:
                             f.write(data)
             for f in files:
-                df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
-                dfs.append(df.melt(
-                    id_vars=df.columns[:7],
-                    value_vars=df.columns[7:],
-                    var_name="Cycle Number",
-                    value_name="dRn"
-                ).rename(columns=
-                    {"Well":"Well Position",
-                     "Dye": "Reporter"}
-                )
-                )
-                print(f"removing: {f}.csv")
-                os.remove(f"{f}.csv")
-                print(f"removed: {f}.csv")
+                try:
+                    df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
+                    dfs.append(df.melt(
+                        id_vars=df.columns[:7],
+                        value_vars=df.columns[7:],
+                        var_name="Cycle Number",
+                        value_name="dRn"
+                    ).rename(columns=
+                        {"Well":"Well Position",
+                        "Dye": "Reporter"}
+                    )
+                    )
+                    print(f"removing: {f}.csv")
+                    os.remove(f"{f}.csv")
+                    print(f"removed: {f}.csv")
+                except Exception:
+                    print("Hanlding mising cycles")
+
+                    handleMissingCycles(f"{f}.csv")
+
+                    df = pd.read_csv(f"{f}.csv", sep="\t", header=0)
+                    dfs.append(df.melt(
+                        id_vars=df.columns[:7],
+                        value_vars=df.columns[7:],
+                        var_name="Cycle Number",
+                        value_name="dRn"
+                    ).rename(columns=
+                        {"Well":"Well Position",
+                        "Dye": "Reporter"}
+                    )
+                    )
+
+                    print(f"removing: {f}.csv")
+                    os.remove(f"{f}.csv")
+                    print(f"removed: {f}.csv")
+
+
+                    
             df = read_rdml(dfs)
         else:
             RDLM = False
