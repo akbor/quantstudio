@@ -160,12 +160,13 @@ with tab1:
             df = transform_json_to_df(wellResult=analysis_result_json['wellResults'],
                                       target_reporter_dict=target_reporter_dict,
                                       well_format=well_format)
-        else:
+        elif file_saved.name.endswith(".xlsx"):
             RDLM = False
             EDS = False
             df = read_df1(file_saved)
             df2 = read_df2(file_saved)
-
+        else:
+            st.warning("Unsupported file type.")
         col1, col2 = st.columns(2)
         if not RDLM | EDS:
             with col1:
