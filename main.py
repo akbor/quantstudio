@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
-from utility import plot_figure, plot_figure2, plot_figure3,positive_ntc_group, handleMissingCycles
+from utility import plot_figure, plot_figure2, plot_figure3,positive_ntc_group, handleMissingCycles, well_position_by_index
 import rdmlpython
+import zipfile, json
 run = rdmlpython.Rdml()
-import os
 RDLM = False
+EDS = False
 
 st.set_page_config(
     page_title="QuantStudio Analysis",
@@ -30,15 +31,47 @@ color_map = {
     "A647": "#515751",
 }
 @st.cache_data
-def read_rdml(l) -> pd.DataFrame:
+def transform_json_to_df(wellResult, target_reporter_dict, well_format):
+    "Pass in the 'wellResults' dict"
+    
+    records = []
+    for data in wellResult:
+        sampleName = data['sampleName']
+        wellIndex = data['wellIndex']
+        
+        for result in data['reactionResults']:
+            targetName = result['targetName']
+            deltaRn = result['amplificationResult']['deltaRn']
+            threshold = result['amplificationResult']['ctThreshold']
+            cycle_numbers = list(range(1, len(deltaRn) + 1)) 
+            
+            for i in range(len(deltaRn)):
+                records.append({
+                    'wellIndex': wellIndex,
+                    'Well Position': well_position_by_index(index=wellIndex, well_format=well_format),
+                    'Sample': sampleName,
+                    'Target': targetName,
+                    'Reporter': target_reporter_dict[targetName],
+                    'Threshold': threshold,
+                    'dRn': deltaRn[i],
+                    'Cycle Number': cycle_numbers[i]
+                })
+    return pd.DataFrame(records, columns=['wellIndex', 'Well Position','Sample', 'Target', 'Reporter', 'dRn', 'Cycle Number','Threshold'])
+@st.cache_data
+def read_rdml(l):
     return pd.concat(l)
 
 @st.cache_data
-def read_rdml_file(filepath) -> pd.DataFrame:
+def read_json_from_zip(zip_file_path, interested_file):
+    with zipfile.ZipFile(zip_file_path, 'r') as handle:
+        with handle.open(interested_file) as ret:
+            return json.load(ret)
+@st.cache_data
+def read_rdml_file(filepath):
     try:
         df = pd.read_csv(filepath, sep="\t", header=0)
         print(f"INFO: removing - {f}.csv")
-        os.remove(f"{f}.csv")
+        # os.remove(f"{f}.csv")
         return df.melt(
             id_vars=df.columns[:7],
             value_vars=df.columns[7:],
@@ -50,12 +83,12 @@ def read_rdml_file(filepath) -> pd.DataFrame:
         )
         # print(f"removed: {f}.csv")
     except Exception:
-        print("Hanlding mising cycles")
+        print("Hanlding Mising Cycles")
 
         handleMissingCycles(f"{f}.csv")
 
         df = pd.read_csv(filepath, sep="\t", header=0)
-        os.remove(f"{f}.csv")
+        # os.remove(f"{f}.csv")
         print(f"INFO: removing - {f}.csv")
         return df.melt(
             id_vars=df.columns[:7],
@@ -94,8 +127,8 @@ def read_df2(path):
 dfs = []
 tab1, tab2 = st.tabs(["QuantStudio", "Name Generator"])
 with tab1:
-    st.info("Supported files: .rdlm from CFX or default export from DA software")
-    f"#### From Design Analysis software use Default export setting and tick 'Combine to one excel file' option"
+    st.info("Supported files: .rdlm from CFX or .eds file from Quantstudio platform")
+   ## f"#### From Design Analysis software use Default export setting and tick 'Combine to one excel file' option"
     file_saved = st.file_uploader(
         "Upload file :sleeping: :", accept_multiple_files=False
     )
@@ -116,19 +149,32 @@ with tab1:
             for f in files:
                 dfs.append(read_rdml_file(filepath=f"{f}.csv"))                    
             df = read_rdml(dfs)
+        elif file_saved.name.endswith(".eds"):
+            analysis_result_json = read_json_from_zip(file_saved,'primary/analysis_result.json')
+            plate_setup = read_json_from_zip(file_saved,'setup/plate_setup.json')
+            target_reporter_dict = {k['name']: k['reporter'] for k in plate_setup['targets']}
+            well_format = plate_setup["blockType"].split("_")[1]
+
+            EDS = True
+            RDLM = False
+            df = transform_json_to_df(wellResult=analysis_result_json['wellResults'],
+                                      target_reporter_dict=target_reporter_dict,
+                                      well_format=well_format)
         else:
             RDLM = False
+            EDS = False
             df = read_df1(file_saved)
             df2 = read_df2(file_saved)
 
         col1, col2 = st.columns(2)
-        if not RDLM:
+        if not RDLM | EDS:
             with col1:
                 f"### Imported data", df
             with col2:
                 f"### File Info", df2
         well_names = df["Well Position"].unique()
         target_names = df["Target"].unique()
+        df
 
         # f"## Dataframe - Guessing Group Data"
         df["TargetName"] = df.Sample.str.split("_", expand=True).get(0).map(positive_ntc_group)
@@ -149,7 +195,7 @@ with tab1:
         # #     st.plotly_chart(sub_fig,use_container_width=True)
 
         # # f"## Results Data - for Thresholds and Channel info"
-        if not RDLM:
+        if not RDLM | EDS:
             ret = read_df_results(file_saved)
             new = pd.merge(df, ret, on=["Target", "Well", "Well Position", "Sample"])
         else:
@@ -162,7 +208,7 @@ with tab1:
         target_color_mappings = {
             k: color_map.get(v[0]) for k, v in target_reporter.items()
         }
-        if not RDLM:
+        if not RDLM | EDS:
             f"## Figures based on Target & Well position"
             well_selector = st.multiselect("Wells", well_names)
             target_selected = st.multiselect("Channel/Target", target_names)

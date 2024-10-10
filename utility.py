@@ -2,7 +2,8 @@ import plotly.express as px
 import pandas as pd
 import fileinput
 
-def handleMissingCycles(file) -> None:
+
+def handleMissingCycles(file):
     line = open(file=file, mode='r').readlines()[0].split("\t")
     header_head = []
     for i in line:
@@ -30,7 +31,19 @@ def handleMissingCycles(file) -> None:
     
     return
 
-def positive_ntc_group(row: str) -> str:
+def well_position_by_index(index, well_format):
+    """
+    Returns the well position based on Zero-based Index
+    """
+    match well_format:
+        case '384W':
+            return f'{chr(ord("A") + int(index / 24))}{index % 24 + 1}'
+        case '96W':
+            return f'{chr(ord("A") + int(index / 12))}{index % 12 + 1}'
+        case _:
+            raise ValueError("Wrong Well Format")
+
+def positive_ntc_group(row):
     if row.lower().startswith("negative"):
         return "Negatives"
     elif row.lower().startswith("pc") or row.lower().startswith("positive"):
@@ -41,6 +54,7 @@ def positive_ntc_group(row: str) -> str:
         return "NTCs"
     else:
         return row
+    
 def plot_figure(second_selection_df):
     fig = px.line(
         data_frame=second_selection_df,
@@ -81,7 +95,7 @@ def plot_figure(second_selection_df):
     # st.markdown(f'<a href="{download_url}" download="plot.svg">Download Plot as SVG</a>', unsafe_allow_html=True)
     return fig
 
-def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
+def plot_figure2(DataFrame, colormappings, group_title):
     try:
         target_thresholds = (
             DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
@@ -124,7 +138,7 @@ def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
                 y=threshold[0],
                 line_color=colormappings.get(target),
                 line_width=1,
-                annotation_text=f"{threshold[0]}",
+                annotation_text=f"{threshold[0]: .2f}",
                 annotation_position="top left",
                 annotation_font_size=12,
                 annotation_font_color="#ffffff",
@@ -173,7 +187,7 @@ def plot_figure2(DataFrame: pd.DataFrame, colormappings, group_title: str):
 
     return fig
 
-def plot_figure3(DataFrame: pd.DataFrame, colormappings, title_list: list):
+def plot_figure3(DataFrame, colormappings, title_list):
     try:
         target_thresholds = (
             DataFrame.groupby("Target")["Threshold"].unique().apply(list).to_dict()
@@ -215,7 +229,7 @@ def plot_figure3(DataFrame: pd.DataFrame, colormappings, title_list: list):
                 y=threshold[0],
                 line_color=colormappings.get(target),
                 line_width=1,
-                annotation_text=f"{threshold[0]}",
+                annotation_text=f"{threshold[0]: .2f}",
                 annotation_position="top left",
                 annotation_font_size=12,
                 annotation_font_color="#ffffff",
